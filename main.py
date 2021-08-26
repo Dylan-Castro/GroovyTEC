@@ -2,13 +2,15 @@ import youtubeUtil, discord
 from discord.ext import commands,tasks
 import os
 from dotenv import load_dotenv
+from server import keep_alive
+song_queue = []
+FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
 
 load_dotenv()
 
 # Get the API token from the .env file.
 DISCORD_TOKEN = os.environ['discord_token']
-FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
 intents = discord.Intents().all()
 client = discord.Client(intents=intents)
@@ -60,12 +62,13 @@ async def play(ctx,*url):
           voice.move_to(voice_channel)
 
       async with ctx.typing():
-          filename = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
-          voice.play(filename)
-      await ctx.send('**Sonando para tí mi king:**\n {}'.format(filename.title))
+        data = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
+        voice.play(discord.FFmpegPCMAudio(data['filename'], **FFMPEG_OPTIONS, after=lambda e: play_next(ctx)))
+        await ctx.send('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=data['title'],link=data['webpage_url']))
     except:
         await ctx.send("No se pudo reproducir la cancion mi king.")
 
 
 if __name__ == "__main__" :
+    keep_alive()
     bot.run(DISCORD_TOKEN)

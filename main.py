@@ -63,7 +63,7 @@ async def play(ctx,*url):
 
       async with ctx.typing():
         data = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
-        voice.play(discord.FFmpegPCMAudio(data['filename'], **FFMPEG_OPTIONS, after=lambda e: play_next(ctx)))
+        voice.play(discord.FFmpegPCMAudio(data['filename'], **FFMPEG_OPTIONS))
         await ctx.send('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=data['title'],link=data['webpage_url']))
     except:
         await ctx.send("No se pudo reproducir la cancion mi king.")

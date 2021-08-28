@@ -40,6 +40,10 @@ async def on_member_remove(member):
   print(f'{member} has leave a server.')
   await member.send('Private message')
 
+@bot.event
+async def on_command_error(ctx, error):
+    await ctx.send(error)
+
 # Lista de Comandos
 @bot.command(name='test', help='Pa testear mi pana')
 async def test(ctx):
@@ -64,13 +68,6 @@ async def play(ctx,*url):
       else:
         cancion = url
 
-      voice_channel = ctx.author.voice.channel
-      voice = ctx.channel.guild.voice_client
-      if voice is None:
-          voice = await voice_channel.connect()
-      elif voice.channel != voice_channel:
-          voice.move_to(voice_channel)
-
       async with ctx.typing():
         #Se busca el video declarado
         data = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
@@ -80,10 +77,28 @@ async def play(ctx,*url):
 
         #Se agrega al queue
         await groovyTECQueue.addSongToQueue(musicObject)
-
-        #await ctx.send('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=data['title'],link=data['webpage_url']))
     except:
         await ctx.send("No se pudo reproducir la cancion mi king.")
+
+
+@bot.command(name='r', help='Para reproducir la ultima cancion')
+async def replay(ctx):
+    try:
+      await groovyTECQueue.replayLastSong()
+    except:
+      await ctx.send("No se pudo reproducir la cancion mi king.")
+
+#Funciones Utiles
+@play.before_invoke
+async def ensure_voice(ctx):
+  if ctx.author.voice is None:
+    raise discord.ext.commands.CommandError("No estas conectado a un canal de voz.")
+  elif ctx.voice_client is None:
+      await ctx.author.voice.channel.connect()
+  elif ctx.author.voice.channel != ctx.channel.guild.voice_client.channel:
+    raise discord.ext.commands.CommandError(botName+" ya se encuentra en uso en otro canal de voz.")
+  else:
+    raise discord.ext.commands.CommandError("Algo salio mal xd.")
 
 if __name__ == "__main__" :
     keep_alive()

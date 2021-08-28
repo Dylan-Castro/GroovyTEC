@@ -1,39 +1,49 @@
-import youtubeUtil, discord
+import youtubeUtil, discord,groovyTECQueue
+from musicObject import MusicObject
+from groovyTECQueue import GroovyTECQueue
 from discord.ext import commands,tasks
 import os
 from dotenv import load_dotenv
 from server import keep_alive
-song_queue = []
+
+#Constantes
+botName= "GroovyTEC"
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
-
-load_dotenv()
-
-# Get the API token from the .env file.
+# Se prepara el ambiente
 DISCORD_TOKEN = os.environ['discord_token']
 
 intents = discord.Intents().all()
+intents.members = True
 client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='-/',intents=intents)
+groovyTECQueue = GroovyTECQueue()
+groovyTECQueue.setBot(bot)
+
+#Funciones Especiales
+def nextQueue(ctx):
+  return 
+
+load_dotenv()
 
 #Lista de Eventos
 @bot.event
 async def on_ready():
-    print("GroovyTEC está ready!")
+  print("GroovyTEC está ready!")
+
+@bot.event
+async def on_member_join(member):
+  await print(f'{member} has joined a server.')
+
+@bot.event
+async def on_member_remove(member):
+  print(f'{member} has leave a server.')
+  await member.send('Private message')
 
 # Lista de Comandos
 @bot.command(name='test', help='Pa testear mi pana')
 async def test(ctx):
     await ctx.send("Ta fino mi rey.")
-
-@bot.command(name='join', help='Tells the bot to join the voice channel')
-async def join(ctx):
-    if not ctx.message.author.voice:
-        await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
-        return
-    else:
-        channel = ctx.message.author.voice.channel
-    await channel.connect()
 
 @bot.command(name='l', help='Para hacer que se quite del canal')
 async def leave(ctx):
@@ -62,12 +72,18 @@ async def play(ctx,*url):
           voice.move_to(voice_channel)
 
       async with ctx.typing():
+        #Se busca el video declarado
         data = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
-        voice.play(discord.FFmpegPCMAudio(data['filename'], **FFMPEG_OPTIONS))
-        await ctx.send('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=data['title'],link=data['webpage_url']))
+        
+        #Se crea el objecto musica
+        musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'],ctx)
+
+        #Se agrega al queue
+        await groovyTECQueue.addSongToQueue(musicObject)
+
+        #await ctx.send('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=data['title'],link=data['webpage_url']))
     except:
         await ctx.send("No se pudo reproducir la cancion mi king.")
-
 
 if __name__ == "__main__" :
     keep_alive()

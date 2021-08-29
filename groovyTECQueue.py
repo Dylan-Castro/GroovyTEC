@@ -3,7 +3,7 @@ from queue import Queue
 
 class GroovyTECQueue:
   # Preparando Ambiente
-  songsQueue = Queue(maxsize = 0)
+  songsQueue = []
   currentSong = None
   lastSong = None
   bot = None
@@ -21,21 +21,30 @@ class GroovyTECQueue:
 
   def nextSong(self):
     try:
-      if not self.songsQueue.empty():        
-        self.currentSong = self.songsQueue.get()
+      if self.songsQueue:        
+        self.currentSong = self.songsQueue.pop(0)
         asyncio.run_coroutine_threadsafe(self.playCurrentSong(), self.bot.loop)
       else:
         self.currentSong = None
     except Exception as e:
-        print(e)   
+      print(e)   
 
-  """
   async def showQueue(self):
     try:
-      if not self.songsQueue.empty():
-        mensaje = "** Este es el queue\n"
-  """
-  
+      if self.songsQueue:
+        canciones = self.songsQueue
+        mensaje = "** Este es el queue:\n**"
+        for cancion in canciones:
+          mensaje += "- "+cancion.getTitle()+"\n"
+        await self.getCurrentSong().getCtx().send(mensaje)
+      elif not self.songsQueue:
+        mensaje = "** No hay canciones en espera papi **"
+        await self.getCurrentSong().getCtx().send(mensaje)
+      #else:
+        #mensaje = "** No hay canciones **"
+        #await 
+    except Exception as e:
+      print(e)
 
   async def playCurrentSong(self):
     voice = self.getCurrentSong().getClient()
@@ -50,20 +59,32 @@ class GroovyTECQueue:
       self.currentSong = song
       await self.playCurrentSong()
     else:
-      self.songsQueue.put(song)
-      await self.getCurrentSong().getCtx().send("**Se agregó "+song.getTitle()+" al queue**")
+      self.songsQueue.append(song)
+      await self.getCurrentSong().getCtx().send("**Se agregó **"+song.getTitle()+"** al queue**")
 
 
   def clearQueue(self):
     self.songsQueue.clear()
 
-  
   async def replayLastSong(self):
     try:
       if self.getCurrentSong() == None:
         self.currentSong = self.lastSong
         await self.playCurrentSong()
       else:
-        await self.getCurrentSong().getCtx().send("Aun hay una cancion en curso oe gil.")
+        await self.getCurrentSong().getCtx().send("Aun hay una canción en curso kza.")
     except:
-        await self.getCurrentSong().getCtx().send("No se pudo reproducir la cancion mi king.")
+        await self.getCurrentSong().getCtx().send("No se pudo reproducir la canción mi king.")
+  
+  def pauseSong(self):
+    if self.getCurrentSong().getClient().is_playing():
+      self.getCurrentSong().getClient().pause()
+
+  def resumeSong(self):
+    if self.getCurrentSong().getClient().is_paused():
+      self.getCurrentSong().getClient().resume()
+
+  def stopSong(self):
+    if self.songsQueue:
+      self.clearQueue()
+    self.getCurrentSong().getClient().stop()

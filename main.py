@@ -49,6 +49,7 @@ async def test(ctx):
 async def leave(ctx):
     voice_client = ctx.message.guild.voice_client
     if voice_client.is_connected():
+        await ctx.send("A mimir Zzz :sleeping:")
         await voice_client.disconnect()
     else:
         await ctx.send("No estoy conectado al canal de voz mi chamo.")
@@ -83,6 +84,25 @@ async def replay(ctx):
       await groovyTECQueue.replayLastSong()
     except:
       await ctx.send("No se pudo reproducir la cancion mi king.")
+
+@bot.command(name="queue", help="Muestra la cola de canciones")
+async def queue(ctx):
+    await groovyTECQueue.showQueue()
+    
+@bot.command(name="pause", help="Detiene la cancion actual")
+async def pause(ctx):
+    await ctx.send("Pausado :pause_button:")
+    groovyTECQueue.pauseSong()
+
+@bot.command(name="resume", help="Reanuda la cancion actual")
+async def resume(ctx):
+    await ctx.send("Resumiendo :play_pause:")
+    groovyTECQueue.resumeSong()
+
+@bot.command(name="stop", help="Detiene la canción")
+async def stop(ctx):
+    await ctx.send("A mimir Zzz :sleeping:")
+    groovyTECQueue.stopSong()
 
 #Funciones Utiles
 @play.before_invoke

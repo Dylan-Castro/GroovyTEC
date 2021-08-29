@@ -28,6 +28,13 @@ class GroovyTECQueue:
         self.currentSong = None
     except Exception as e:
         print(e)   
+
+  """
+  async def showQueue(self):
+    try:
+      if not self.songsQueue.empty():
+        mensaje = "** Este es el queue\n"
+  """
   
 
   async def playCurrentSong(self):
@@ -44,7 +51,7 @@ class GroovyTECQueue:
       await self.playCurrentSong()
     else:
       self.songsQueue.put(song)
-      await self.getCurrentSong().getCtx().send("Se agregó al queue")
+      await self.getCurrentSong().getCtx().send("**Se agregó "+song.getTitle()+" al queue**")
 
 
   def clearQueue(self):
@@ -55,7 +62,6 @@ class GroovyTECQueue:
     try:
       if self.getCurrentSong() == None:
         self.currentSong = self.lastSong
-        print("test")
         await self.playCurrentSong()
       else:
         await self.getCurrentSong().getCtx().send("Aun hay una cancion en curso oe gil.")

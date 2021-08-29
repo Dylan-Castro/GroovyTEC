@@ -20,10 +20,6 @@ bot = commands.Bot(command_prefix='-/',intents=intents)
 groovyTECQueue = GroovyTECQueue()
 groovyTECQueue.setBot(bot)
 
-#Funciones Especiales
-def nextQueue(ctx):
-  return 
-
 load_dotenv()
 
 #Lista de Eventos
@@ -33,11 +29,11 @@ async def on_ready():
 
 @bot.event
 async def on_member_join(member):
-  await print(f'{member} has joined a server.')
+  await print(f'{member} has joined the server.')
 
 @bot.event
 async def on_member_remove(member):
-  print(f'{member} has leave a server.')
+  print(f'{member} has leaved the server.')
   await member.send('Private message')
 
 @bot.event
@@ -97,8 +93,10 @@ async def ensure_voice(ctx):
       await ctx.author.voice.channel.connect()
   elif ctx.author.voice.channel != ctx.channel.guild.voice_client.channel:
     raise discord.ext.commands.CommandError(botName+" ya se encuentra en uso en otro canal de voz.")
+  elif ctx.author.voice.channel == ctx.channel.guild.voice_client.channel:
+    pass
   else:
-    raise discord.ext.commands.CommandError("Algo salio mal xd.")
+    raise discord.ext.commands.CommandError("Algo salió mal xd.")
 
 if __name__ == "__main__" :
     keep_alive()

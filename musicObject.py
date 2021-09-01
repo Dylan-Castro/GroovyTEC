@@ -2,17 +2,11 @@ class MusicObject:
   filenameUrl = None
   youtubeUrl = None
   title = None
-  channel = None
-  client = None
-  ctx = None
 
-  def __init__(self,filenameUrl,youtubeUrl,title,ctx):
+  def __init__(self,filenameUrl,youtubeUrl,title):
     self.filenameUrl = filenameUrl
     self.youtubeUrl = youtubeUrl
     self.title = title
-    self.channel = ctx.author.voice.channel
-    self.client = ctx.channel.guild.voice_client
-    self.ctx = ctx
 
   def getFilenameUrl(self):
     return self.filenameUrl
@@ -26,15 +20,3 @@ class MusicObject:
     return self.title
   def setTitle(self,title):
     self.title = title 
-  def getChannel(self):
-    return self.channel
-  def setChannel(self,channel):
-    self.channel = channel
-  def getClient(self):
-    return self.client
-  def setClient(self,client):
-    self.client = client 
-  def getCtx(self):
-    return self.ctx
-  def setCtx(self,ctx):
-    self.ctx = ctx 

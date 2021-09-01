@@ -1,4 +1,5 @@
 import youtube_dl,discord,asyncio
+from functools import partial
 youtube_dl.utils.bug_reports_message = lambda: ''
 
 ytdl_format_options = {
@@ -14,7 +15,7 @@ ytdl_format_options = {
     'source_address': '0.0.0.0' # bind to ipv4 since ipv6 addresses cause issues sometimes
 }
 
-FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+FFMPEG_OPTIONS = {'before_options': '-nostdin -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
@@ -29,7 +30,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False):
         loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
+        #data = await loop.run_in_executor(None, lambda: #ytdl.extract_info(url, download=not stream))
+        to_run = partial(ytdl.extract_info, url=url, download=not stream)
+        data = await loop.run_in_executor(None, to_run)
 
         if 'entries' in data:
             # take first item from a playlist

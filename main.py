@@ -2,7 +2,7 @@ import youtubeUtil, discord,groovyTECQueue
 from musicObject import MusicObject
 from groovyTECQueue import GroovyTECQueue
 from discord.ext import commands,tasks
-import os
+import os,psutil
 from dotenv import load_dotenv
 from server import keep_alive
 
@@ -16,7 +16,7 @@ DISCORD_TOKEN = os.environ['discord_token']
 intents = discord.Intents().all()
 intents.members = True
 client = discord.Client(intents=intents)
-bot = commands.Bot(command_prefix='-/',intents=intents)
+bot = commands.Bot(command_prefix='-',intents=intents)
 groovyTECQueue = GroovyTECQueue()
 groovyTECQueue.setBot(bot)
 
@@ -41,12 +41,14 @@ async def on_command_error(ctx, error):
     await ctx.send(error)
 
 # Lista de Comandos
-@bot.command(name='test', help='Pa testear mi pana')
+@bot.command(name='test', aliases=['t'], help='Pa testear mi pana')
 async def test(ctx):
+    actualizarContexto(ctx)
     await ctx.send("Ta fino mi rey.")
 
-@bot.command(name='l', help='Para hacer que se quite del canal')
+@bot.command(name='leave', aliases=['l'], help='Para hacer que se quite del canal')
 async def leave(ctx):
+    actualizarContexto(ctx)
     voice_client = ctx.message.guild.voice_client
     if voice_client.is_connected():
         await ctx.send("A mimir Zzz :sleeping:")
@@ -54,9 +56,10 @@ async def leave(ctx):
     else:
         await ctx.send("No estoy conectado al canal de voz mi chamo.")
 
-@bot.command(name='p', help='Para reproducir una cancion')
+@bot.command(name='play', aliases=['p'], help='Para reproducir una canción')
 async def play(ctx,*url):
     try :
+      actualizarContexto(ctx)
       cancion = ""
       if type(url) == tuple:
         for palabra in url:
@@ -70,43 +73,66 @@ async def play(ctx,*url):
         data = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
         
         #Se crea el objecto musica
-        musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'],ctx)
+        musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'])
 
         #Se agrega al queue
         await groovyTECQueue.addSongToQueue(musicObject)
     except:
-        await ctx.send("No se pudo reproducir la cancion mi king.")
+        await ctx.send("No se pudo reproducir la canción mi king.")
 
 
-@bot.command(name='r', help='Para reproducir la ultima cancion')
+@bot.command(name='replay', aliases=['r'], help='Para reproducir la ultima canción')
 async def replay(ctx):
     try:
+      actualizarContexto(ctx)
       await groovyTECQueue.replayLastSong()
     except:
-      await ctx.send("No se pudo reproducir la cancion mi king.")
+      await ctx.send("No se pudo reproducir la canción mi king.")
 
-@bot.command(name="queue", help="Muestra la cola de canciones")
+@bot.command(name="queue", aliases=['q'], help="Muestra la cola de canciones")
 async def queue(ctx):
+    actualizarContexto(ctx)
     await groovyTECQueue.showQueue()
     
-@bot.command(name="pause", help="Detiene la cancion actual")
+@bot.command(name="pause", help="Detiene la canción actual")
 async def pause(ctx):
+    actualizarContexto(ctx)
     await ctx.send("Pausado :pause_button:")
     groovyTECQueue.pauseSong()
 
-@bot.command(name="resume", help="Reanuda la cancion actual")
+@bot.command(name="resume", help="Reanuda la canción actual")
 async def resume(ctx):
+    actualizarContexto(ctx)
     await ctx.send("Resumiendo :play_pause:")
     groovyTECQueue.resumeSong()
 
-@bot.command(name="stop", help="Detiene la canción")
+@bot.command(name="stop", aliases=['s'], help="Detiene la canción")
 async def stop(ctx):
+    actualizarContexto(ctx)
     await ctx.send("A mimir Zzz :sleeping:")
     groovyTECQueue.stopSong()
 
+@bot.command(name="skip", help="Para pasar a la siguiente canción")
+async def skip(ctx):
+    actualizarContexto(ctx)
+    await groovyTECQueue.skipSong()
+
+@bot.command(name="resources", help="Para ver los recursos del servidor")
+async def resources(ctx):
+    actualizarContexto(ctx)
+    mensaje = """Bajando pepa con:\n
+    CPU: {0}%\n
+    RAM: {1}%""".format(psutil.cpu_percent(),psutil.virtual_memory().percent)
+    await ctx.send(mensaje)
+
+@bot.command(name="loop", help="Para poner en loop la cancion actual")
+async def loop(ctx):
+    actualizarContexto(ctx)
+    await groovyTECQueue.loopSong()
+
 #Funciones Utiles
 @play.before_invoke
-async def ensure_voice(ctx):
+async def validarDisponibilidadDelBot(ctx):
   if ctx.author.voice is None:
     raise discord.ext.commands.CommandError("No estas conectado a un canal de voz.")
   elif ctx.voice_client is None:
@@ -117,6 +143,9 @@ async def ensure_voice(ctx):
     pass
   else:
     raise discord.ext.commands.CommandError("Algo salió mal xd.")
+
+def actualizarContexto(ctx):
+  groovyTECQueue.setContext(ctx)
 
 if __name__ == "__main__" :
     keep_alive()

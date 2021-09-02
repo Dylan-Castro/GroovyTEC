@@ -78,7 +78,7 @@ async def play(ctx,*url):
         data = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
         
         #Se crea el objecto musica
-        musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'])
+        musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'],data['duration'])
 
         #Se agrega al queue
         await groovyTECQueue.addSongToQueue(musicObject)
@@ -134,6 +134,11 @@ async def resources(ctx):
 async def loop(ctx):
     actualizarContexto(ctx)
     await groovyTECQueue.loopSong()
+
+@bot.command(name="current", help="Para conocer información de la canción actual")
+async def current(ctx):
+    actualizarContexto(ctx)
+    await groovyTECQueue.showCurrent()
 
 #Funciones Utiles
 @loop.before_invoke

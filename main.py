@@ -44,7 +44,8 @@ async def on_command_error(ctx, error):
 @bot.command(name='test', aliases=['t'], help='Pa testear mi pana')
 async def test(ctx):
     actualizarContexto(ctx)
-    await ctx.send("Ta fino mi rey.")
+    embed = discord.Embed(title="", description="Ta fino mi rey", color=discord.Color.blue())
+    await ctx.send(embed=embed)
 
 @bot.command(name='leave', aliases=['l'], help='Para hacer que se quite del canal')
 async def leave(ctx):

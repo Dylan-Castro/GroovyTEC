@@ -50,11 +50,15 @@ async def test(ctx):
 async def leave(ctx):
     actualizarContexto(ctx)
     voice_client = ctx.message.guild.voice_client
-    if voice_client.is_connected():
+    if voice_client == None:
+      await ctx.send("No estoy conectado al canal de voz mi chamo.")
+    else:
+      if ctx.author.voice.channel != ctx.channel.guild.voice_client.channel:
+        raise discord.ext.commands.CommandError(botName+" ya se encuentra en uso en otro canal de voz.")
+      else:
         await ctx.send("A mimir Zzz :sleeping:")
         await voice_client.disconnect()
-    else:
-        await ctx.send("No estoy conectado al canal de voz mi chamo.")
+        
 
 @bot.command(name='play', aliases=['p'], help='Para reproducir una canción')
 async def play(ctx,*url):
@@ -131,7 +135,16 @@ async def loop(ctx):
     await groovyTECQueue.loopSong()
 
 #Funciones Utiles
+@loop.before_invoke
+@pause.before_invoke
 @play.before_invoke
+@queue.before_invoke
+@replay.before_invoke
+@resources.before_invoke
+@resume.before_invoke
+@skip.before_invoke
+@stop.before_invoke
+@test.before_invoke
 async def validarDisponibilidadDelBot(ctx):
   if ctx.author.voice is None:
     raise discord.ext.commands.CommandError("No estas conectado a un canal de voz.")

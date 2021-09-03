@@ -1,4 +1,5 @@
 import discord,asyncio
+import time
 from queue import Queue
 
 class GroovyTECQueue:
@@ -6,6 +7,7 @@ class GroovyTECQueue:
   songsQueue = []
   currentSong = None
   lastSong = None
+  timer = None
   loop = False
   
   # Variables Discord
@@ -63,6 +65,7 @@ class GroovyTECQueue:
     currentSong = self.getCurrentSong()
     self.client.play(discord.FFmpegPCMAudio(currentSong.getFilenameUrl(), **self.FFMPEG_OPTIONS), after = lambda e:self.nextSong())
     print(currentSong.getDuration())
+    self.timer = time.perf_counter()
     self.lastSong = self.getCurrentSong()
     if not self.loop:
       await self.ctx.send('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=currentSong.getTitle(),link=currentSong.getYoutubeUrl()))
@@ -79,6 +82,7 @@ class GroovyTECQueue:
   async def showCurrent(self):
     currentSong = self.getCurrentSong()
     if currentSong:
+      # Construcción del tiempo total 
       duration = currentSong.getDuration()
       seconds = duration % (24 * 3600) 
       hour = seconds // 3600
@@ -89,7 +93,19 @@ class GroovyTECQueue:
           songTime = "%d:%02d:%02d" % (hour, minutes, seconds)
       else:
           songTime = "%02d:%02d" % (minutes, seconds)
-      embed = discord.Embed(title="",description=currentSong.getTitle()+"\n"+songTime)
+      # Construcción del tiempo actual
+      actualTime = int(time.perf_counter()-self.timer)
+      seconds = actualTime % (24 * 3600) 
+      hour = seconds // 3600
+      seconds %= 3600
+      minutes = seconds // 60
+      seconds %= 60
+      if hour > 0:
+          elapsedTime = "%d:%02d:%02d" % (hour, minutes, seconds)
+      else:
+          elapsedTime = "%02d:%02d" % (minutes, seconds)
+            
+      embed = discord.Embed(title="",description=currentSong.getTitle()+"\n"+elapsedTime+"/"+songTime)
       await self.ctx.send(embed=embed)
     else:
       embed=discord.Embed(title="",description="**No hay canciones sonando manito**")

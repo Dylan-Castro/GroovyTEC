@@ -1,10 +1,12 @@
 import discord,asyncio
 import time
+from async_timeout import timeout
 from queue import Queue
 
 class GroovyTECQueue:
   # Preparando Ambiente
-  songsQueue = []
+  songsQueue = asyncio.Queue()
+  next = asyncio.Event()
   currentSong = None
   lastSong = None
   timer = None
@@ -30,29 +32,15 @@ class GroovyTECQueue:
   def getCurrentSong(self):
     return self.currentSong
 
-
-  def nextSong(self):
-    try:
-      if self.loop:
-        asyncio.run_coroutine_threadsafe(self.playCurrentSong(), self.bot.loop)
-      else:
-        if self.songsQueue:        
-          self.currentSong = self.songsQueue.pop(0)
-          asyncio.run_coroutine_threadsafe(self.playCurrentSong(), self.bot.loop)
-        else:        
-          self.currentSong = None
-    except Exception as e:
-      print(e)   
-
   async def showQueue(self):
     try:
-      if self.songsQueue:
-        canciones = self.songsQueue
+      if self.songsQueue.qsize() != 0:
+        canciones = self.songsQueue._queue
         mensaje = "** Este es el queue:\n**"
         for cancion in canciones:
           mensaje += "- "+cancion.getTitle()+"\n"
         await self.ctx.send(mensaje)
-      elif not self.songsQueue:
+      else:
         mensaje = "** No hay canciones en espera papi **"
         await self.ctx.send(mensaje)
       #else:
@@ -62,21 +50,35 @@ class GroovyTECQueue:
       print(e)
 
   async def playCurrentSong(self):
-    currentSong = self.getCurrentSong()
-    self.client.play(discord.FFmpegPCMAudio(currentSong.getFilenameUrl(), **self.FFMPEG_OPTIONS), after = lambda e:self.nextSong())
-    print(currentSong.getDuration())
-    self.timer = time.perf_counter()
-    self.lastSong = self.getCurrentSong()
-    if not self.loop:
-      await self.ctx.send('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=currentSong.getTitle(),link=currentSong.getYoutubeUrl()))
+
+    await self.bot.wait_until_ready()
+    while not self.bot.is_closed():
+      self.next.clear()
+      try:
+        async with timeout(300):  # 5 minutos
+          if not self.loop:
+            self.currentSong = await self.songsQueue.get()
+          else:
+            await asyncio.sleep(0)
+      except asyncio.TimeoutError:
+        return await self.client.disconnect()
+        
+      self.client.play(discord.FFmpegPCMAudio(self.currentSong.getFilenameUrl(), **self.FFMPEG_OPTIONS), after=lambda e: self.bot.loop.call_soon_threadsafe(self.next.set))
+      self.timer = time.perf_counter()
+      
+      if not self.loop:
+        await self.ctx.send('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=self.currentSong.getTitle(),link=self.currentSong.getYoutubeUrl()))
+        self.lastSong = self.currentSong
+
+      await self.next.wait()
+      
+      if self.songsQueue.qsize() == 0 and not self.loop:
+        self.currentSong = None
 
 
   async def addSongToQueue(self, song):
-    if self.getCurrentSong() == None:
-      self.currentSong = song
-      await self.playCurrentSong()
-    else:
-      self.songsQueue.append(song)
+    await self.songsQueue.put(song)
+    if not self.getCurrentSong() == None:
       await self.ctx.send("**Se agregó **"+song.getTitle()+"** al queue**")
 
   async def showCurrent(self):
@@ -113,13 +115,13 @@ class GroovyTECQueue:
 
 
   def clearQueue(self):
-    self.songsQueue.clear()
+    while self.songsQueue.qsize() != 0:
+        self.songsQueue.get_nowait()
 
   async def replayLastSong(self):
     try:
       if self.getCurrentSong() == None:
-        self.currentSong = self.lastSong
-        await self.playCurrentSong()
+        await self.songsQueue.put(self.lastSong)
       else:
         await self.ctx.send("Aun hay una canción en curso kza.")
     except:
@@ -136,14 +138,18 @@ class GroovyTECQueue:
   def stopSong(self):
     if self.songsQueue:
       self.clearQueue()
+    if self.loop:
+      self.loop = False
     self.client.stop()
     self.currentSong = None
 
   async def skipSong(self):
     if self.getCurrentSong() != None:
-      if self.songsQueue:
+      if self.songsQueue.qsize() != 0:
+        if self.loop:
+          self.currentSong = await self.songsQueue.get() 
         await self.ctx.send("Cambiando a la siguiente cancion :track_next:")
-        self.client.stop()     
+        self.client.stop()                             
       else:
         await self.ctx.send("**No hay más canciones en espera en el queue**")
         self.client.stop()

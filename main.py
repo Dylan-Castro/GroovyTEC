@@ -63,8 +63,14 @@ async def leave(ctx):
 
 @bot.command(name='play', aliases=['p'], help='Para reproducir una canción')
 async def play(ctx,*url):
-    try :
+    try :      
+      
       actualizarContexto(ctx)
+
+      #Inicializa el queue si es que el bot a estado desconectado
+      if(groovyTECQueue.currentSong == None ):
+        bot.loop.create_task(groovyTECQueue.playCurrentSong())
+      
       cancion = ""
       if type(url) == tuple:
         for palabra in url:
@@ -73,15 +79,15 @@ async def play(ctx,*url):
       else:
         cancion = url
 
+      #Se busca el video declarado
       async with ctx.typing():
-        #Se busca el video declarado
         data = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
-        
-        #Se crea el objecto musica
-        musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'],data['duration'])
+      
+      #Se crea el objecto musica
+      musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'],data['duration'])
 
-        #Se agrega al queue
-        await groovyTECQueue.addSongToQueue(musicObject)
+      #Se agrega al queue
+      await groovyTECQueue.addSongToQueue(musicObject)
     except:
         await ctx.send("No se pudo reproducir la canción mi king.")
 

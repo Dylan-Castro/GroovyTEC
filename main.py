@@ -72,7 +72,12 @@ async def play(ctx,*url):
         bot.loop.create_task(groovyTECQueue.playCurrentSong())
       
       cancion = ""
-      if type(url) == tuple:
+      if not url:
+        if ctx.channel.guild.voice_client.is_playing():
+          return await groovyTECQueue.pauseSong()
+        else:
+          return await groovyTECQueue.resumeSong()
+      elif type(url) == tuple:
         for palabra in url:
           cancion += palabra
           cancion += " "
@@ -108,20 +113,17 @@ async def queue(ctx):
 @bot.command(name="pause", help="Detiene la canción actual")
 async def pause(ctx):
     actualizarContexto(ctx)
-    await ctx.send("Pausado :pause_button:")
-    groovyTECQueue.pauseSong()
+    await groovyTECQueue.pauseSong()
 
-@bot.command(name="resume", help="Reanuda la canción actual")
+@bot.command(name="resume", aliases=['continue'], help="Reanuda la canción actual")
 async def resume(ctx):
     actualizarContexto(ctx)
-    await ctx.send("Resumiendo :play_pause:")
-    groovyTECQueue.resumeSong()
+    await groovyTECQueue.resumeSong()
 
 @bot.command(name="stop", aliases=['s'], help="Detiene la canción")
 async def stop(ctx):
     actualizarContexto(ctx)
-    await ctx.send("A mimir Zzz :sleeping:")
-    groovyTECQueue.stopSong()
+    await groovyTECQueue.stopSong()
 
 @bot.command(name="skip", help="Para pasar a la siguiente canción")
 async def skip(ctx):
@@ -134,7 +136,7 @@ async def resources(ctx):
     mensaje = """Bajando pepa con:\n
     CPU: {0}%\n
     RAM: {1}%""".format(psutil.cpu_percent(),psutil.virtual_memory().percent)
-    await ctx.send(mensaje)
+    await groovyTECQueue.enviarMensaje(mensaje)
 
 @bot.command(name="loop", help="Para poner en loop la cancion actual")
 async def loop(ctx):

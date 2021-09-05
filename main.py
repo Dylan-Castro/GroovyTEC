@@ -72,12 +72,12 @@ async def play(ctx,*url):
         bot.loop.create_task(groovyTECQueue.playCurrentSong())
       
       cancion = ""
-      if not url:
+      if type(url) == tuple and len(url)==0:
         if ctx.channel.guild.voice_client.is_playing():
           return await groovyTECQueue.pauseSong()
         else:
           return await groovyTECQueue.resumeSong()
-      elif type(url) == tuple:
+      elif type(url) == tuple and len(url)!=0:
         for palabra in url:
           cancion += palabra
           cancion += " "

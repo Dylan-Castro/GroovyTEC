@@ -31,7 +31,7 @@ class GroovyTECQueue:
 
   async def enviarMensaje(self, mensaje, titulo = ""):
     embed=discord.Embed(title=titulo,description=mensaje)
-    await self.ctx.send(embed=embed)
+    return await self.ctx.send(embed=embed)
 
   def getCurrentSong(self):
     return self.currentSong
@@ -71,10 +71,11 @@ class GroovyTECQueue:
       self.elapsed_time = 0
 
       if not self.loop:
-        await self.enviarMensaje('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=self.currentSong.getTitle(),link=self.currentSong.getYoutubeUrl()))
+        message = await self.enviarMensaje('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=self.currentSong.getTitle(),link=self.currentSong.getYoutubeUrl()))
         self.lastSong = self.currentSong
 
       await self.next.wait()
+      await message.delete()
       
       if self.songsQueue.qsize() == 0 and not self.loop:
         self.currentSong = None

@@ -18,6 +18,7 @@ class GroovyTECQueue:
   ctx = None
   client = None
   channel = None
+  currentTask = None
   # Constantes
   FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
   
@@ -29,8 +30,9 @@ class GroovyTECQueue:
   def setBot(self, bot):
     self.bot = bot
 
-  async def enviarMensaje(self, mensaje, titulo = ""):
-    embed=discord.Embed(title=titulo,description=mensaje)
+  async def sendMessage(self, mensaje, thumbnail = "", titulo = ""):
+    embed=discord.Embed(title=titulo,description=mensaje,color=discord.Color.purple())
+    embed.set_thumbnail(url=thumbnail).set_image(url=thumbnail)
     return await self.ctx.send(embed=embed)
 
   def getCurrentSong(self):
@@ -43,10 +45,10 @@ class GroovyTECQueue:
         mensaje = "** Este es el queue:\n**"
         for cancion in canciones:
           mensaje += "- "+cancion.getTitle()+"\n"
-        await self.enviarMensaje(mensaje)
+        await self.sendMessage(mensaje)
       else:
         mensaje = "** No hay canciones en espera papi **"
-        await self.enviarMensaje(mensaje)
+        await self.sendMessage(mensaje)
       #else:
         #mensaje = "** No hay canciones **"
         #await 
@@ -60,22 +62,23 @@ class GroovyTECQueue:
       self.next.clear()
       if not self.loop:
         try:
-          async with timeout(500):  # 5 minutos
-            self.currentSong = await self.songsQueue.get()
+          self.currentSong = await asyncio.wait_for(self.songsQueue.get(), 300) # 5 minutos
         except asyncio.TimeoutError:
-          await self.enviarMensaje("**Grupo muerto?? Ñafo como dirían los hipócritas** :wave:")
+          await self.sendMessage("**Grupo muerto?? Ñafo como dirían los hipócritas** :wave:")
           return await self.client.disconnect()
         
       self.client.play(discord.FFmpegPCMAudio(self.currentSong.getFilenameUrl(), **self.FFMPEG_OPTIONS), after=lambda e: self.bot.loop.call_soon_threadsafe(self.next.set))
       self.start_timestamp = time.perf_counter()
       self.elapsed_time = 0
 
+      message = None
       if not self.loop:
-        message = await self.enviarMensaje('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=self.currentSong.getTitle(),link=self.currentSong.getYoutubeUrl()))
+        message = await self.sendMessage('**Sonando para tí mi king:**\n {title} \n {link}'.format(title=self.currentSong.getTitle(),link=self.currentSong.getYoutubeUrl()),self.currentSong.getThumbnail())
         self.lastSong = self.currentSong
 
       await self.next.wait()
-      await message.delete()
+      if not message == None:
+        await message.delete()
       
       if self.songsQueue.qsize() == 0 and not self.loop:
         self.currentSong = None
@@ -84,7 +87,7 @@ class GroovyTECQueue:
   async def addSongToQueue(self, song):
     await self.songsQueue.put(song)
     if not self.getCurrentSong() == None:
-      await self.enviarMensaje("**Se agregó **"+song.getTitle()+"** al queue**")
+      await self.sendMessage("**Se agregó **"+song.getTitle()+"** al queue**")
 
   async def showCurrent(self):
     currentSong = self.getCurrentSong()
@@ -115,9 +118,9 @@ class GroovyTECQueue:
       else:
           current_elapsed_time = "%02d:%02d" % (minutes, seconds)
       
-      await self.enviarMensaje(currentSong.getTitle()+"\n"+current_elapsed_time+"/"+songTime)
+      await self.sendMessage(currentSong.getTitle()+"\n"+current_elapsed_time+"/"+songTime)
     else:
-      await self.enviarMensaje("**No hay canciones sonando manito**")
+      await self.sendMessage("**No hay canciones sonando manito**")
 
 
   def clearQueue(self):
@@ -126,24 +129,26 @@ class GroovyTECQueue:
 
   async def replayLastSong(self):
     try:
-      if self.getCurrentSong() == None:
+      if self.lastSong == None:
+        await self.sendMessage("No se ha tocado ninguna canción antes, por que no mejor me tocas esta papi :cucumber:.")
+      elif self.getCurrentSong() == None:
         await self.songsQueue.put(self.lastSong)
       else:
-        await self.enviarMensaje("Aun hay una canción en curso kza.")
+        await self.sendMessage("Aun hay una canción en curso kza.")
     except:
-        await self.enviarMensaje("No se pudo reproducir la canción mi king.")
+        await self.sendMessage("No se pudo reproducir la canción mi king.")
   
   async def pauseSong(self):
     if self.client.is_playing():
       self.elapsed_time += int(time.perf_counter()-self.start_timestamp)
       self.client.pause()
-      await self.enviarMensaje("Pausado :pause_button:")
+      await self.sendMessage("Pausado :pause_button:")
 
   async def resumeSong(self):
     if self.client.is_paused():
       self.start_timestamp = time.perf_counter()
       self.client.resume()
-      await self.enviarMensaje("Resumiendo :play_pause:")
+      await self.sendMessage("Resumiendo :play_pause:")
 
   async def stopSong(self):
     if self.songsQueue:
@@ -154,28 +159,38 @@ class GroovyTECQueue:
     self.start_timestamp = None
     self.elapsed_time = 0
     self.currentSong = None
-    await self.enviarMensaje("A mimir Zzz :sleeping:")
+    await self.sendMessage("A mimir Zzz :sleeping:")
 
   async def skipSong(self):
     if self.getCurrentSong() != None:
       if self.songsQueue.qsize() != 0:
         if self.loop:
           self.currentSong = await self.songsQueue.get() 
-        await self.enviarMensaje("Cambiando a la siguiente cancion :track_next:")
+        await self.sendMessage("Cambiando a la siguiente cancion :track_next:")
         self.elapsed_time = 0
         self.client.stop()                             
       else:
-        await self.enviarMensaje("**No hay más canciones en espera en el queue**")
+        await self.sendMessage("**No hay más canciones en espera en el queue**")
         self.client.stop()
 
   async def loopSong(self):
     if self.getCurrentSong() != None:
       if self.loop:
         self.loop = False
-        await self.enviarMensaje("Se detuvo el loop, volviendo a las canciones del queue mi ciela :nail_care:")    
+        await self.sendMessage("Se detuvo el loop, volviendo a las canciones del queue mi ciela :nail_care:")    
       else:
         self.loop = True
-        await self.enviarMensaje("**Reproduciendo en loop **"+self.getCurrentSong().getTitle())
-        
-
-        
+        await self.sendMessage("**Reproduciendo en loop **"+self.getCurrentSong().getTitle())
+    
+  def clearVars(self):
+    self.clearQueue()
+    self.next.clear()
+    self.currentSong = None
+    self.lastSong = None
+    self.start_timestamp = None
+    self.elapsed_time = 0
+    self.loop = False
+    self.ctx = None
+    self.client = None
+    self.channel = None
+    self.currentTask = None

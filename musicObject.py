@@ -2,12 +2,14 @@ class MusicObject:
   filenameUrl = None
   youtubeUrl = None
   title = None
+  thumbnail = None
 
-  def __init__(self,filenameUrl,youtubeUrl,title,duration):
+  def __init__(self,filenameUrl,youtubeUrl,title,duration,thumbnail):
     self.filenameUrl = filenameUrl
     self.youtubeUrl = youtubeUrl
     self.title = title
     self.duration = duration
+    self.thumbnail = thumbnail
 
   def getFilenameUrl(self):
     return self.filenameUrl
@@ -23,4 +25,6 @@ class MusicObject:
     self.title = title 
   def getDuration(self):
     return self.duration
+  def getThumbnail(self):
+    return self.thumbnail
 

@@ -14,8 +14,7 @@ FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconne
 DISCORD_TOKEN = os.environ['discord_token']
 
 intents = discord.Intents().all()
-intents.members = True
-client = discord.Client(intents=intents)
+#client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='-',intents=intents)
 groovyTECQueue = GroovyTECQueue()
 groovyTECQueue.setBot(bot)
@@ -52,13 +51,17 @@ async def leave(ctx):
     actualizarContexto(ctx)
     voice_client = ctx.message.guild.voice_client
     if voice_client == None:
-      await ctx.send("No estoy conectado al canal de voz mi chamo.")
+      await groovyTECQueue.sendMessage("No estoy conectado al  canal de voz mi chamo.")
     else:
       if ctx.author.voice.channel != ctx.channel.guild.voice_client.channel:
         raise discord.ext.commands.CommandError(botName+" ya se encuentra en uso en otro canal de voz.")
       else:
-        await ctx.send("A mimir Zzz :sleeping:")
+        await groovyTECQueue.sendMessage("A mimir Zzz :sleeping:")
+        if(groovyTECQueue.currentTask != None):
+          groovyTECQueue.currentTask.cancel()
+        groovyTECQueue.clearVars()
         await voice_client.disconnect()
+        
         
 
 @bot.command(name='play', aliases=['p'], help='Para reproducir una canción')
@@ -69,7 +72,7 @@ async def play(ctx,*url):
 
       #Inicializa el queue si es que el bot a estado desconectado
       if(groovyTECQueue.currentSong == None ):
-        bot.loop.create_task(groovyTECQueue.playCurrentSong())
+        groovyTECQueue.currentTask = bot.loop.create_task(groovyTECQueue.playCurrentSong())
       
       cancion = ""
       if type(url) == tuple and len(url)==0:
@@ -89,12 +92,12 @@ async def play(ctx,*url):
         data = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
       
       #Se crea el objecto musica
-      musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'],data['duration'])
+      musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'],data['duration'],data['thumbnail'])
 
       #Se agrega al queue
       await groovyTECQueue.addSongToQueue(musicObject)
     except:
-        await ctx.send("No se pudo reproducir la canción mi king.")
+        await groovyTECQueue.sendMessage("No se pudo reproducir la canción mi king.")
 
 
 @bot.command(name='replay', aliases=['r'], help='Para reproducir la ultima canción')
@@ -103,7 +106,7 @@ async def replay(ctx):
       actualizarContexto(ctx)
       await groovyTECQueue.replayLastSong()
     except:
-      await ctx.send("No se pudo reproducir la canción mi king.")
+      await groovyTECQueue.sendMessage("No se pudo reproducir la canción mi king.")
 
 @bot.command(name="queue", aliases=['q'], help="Muestra la cola de canciones")
 async def queue(ctx):
@@ -136,7 +139,7 @@ async def resources(ctx):
     mensaje = """Bajando pepa con:\n
     CPU: {0}%\n
     RAM: {1}%""".format(psutil.cpu_percent(),psutil.virtual_memory().percent)
-    await groovyTECQueue.enviarMensaje(mensaje)
+    await groovyTECQueue.sendMessage(mensaje)
 
 @bot.command(name="loop", help="Para poner en loop la cancion actual")
 async def loop(ctx):
@@ -159,6 +162,7 @@ async def current(ctx):
 @skip.before_invoke
 @stop.before_invoke
 @test.before_invoke
+@current.before_invoke
 async def validarDisponibilidadDelBot(ctx):
   if ctx.author.voice is None:
     raise discord.ext.commands.CommandError("No estas conectado a un canal de voz.")

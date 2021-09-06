@@ -62,7 +62,7 @@ class GroovyTECQueue:
       self.next.clear()
       if not self.loop:
         try:
-          self.currentSong = await asyncio.wait_for(self.songsQueue.get(), 300) # 5 minutos
+          self.currentSong = await asyncio.wait_for(self.songsQueue.get(), 240) # 4 minutos
         except asyncio.TimeoutError:
           await self.sendMessage("**Grupo muerto?? Ñafo como dirían los hipócritas** :wave:")
           return await self.client.disconnect()

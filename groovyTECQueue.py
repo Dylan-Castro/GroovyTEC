@@ -30,6 +30,11 @@ class GroovyTECQueue:
   def setBot(self, bot):
     self.bot = bot
 
+  def createTask(self):
+    #Inicializa el queue si es que el bot a estado desconectado
+    if(self.currentSong == None ):
+      self.currentTask = asyncio.create_task(self.playCurrentSong())
+
   async def sendMessage(self, mensaje, thumbnail = "", titulo = ""):
     embed=discord.Embed(title=titulo,description=mensaje,color=discord.Color.purple())
     embed.set_thumbnail(url=thumbnail).set_image(url=thumbnail)

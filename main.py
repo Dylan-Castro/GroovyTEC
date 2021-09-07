@@ -1,13 +1,15 @@
-import youtubeUtil, discord,groovyTECQueue
+import youtubeUtil, discord
 from musicObject import MusicObject
 from groovyTECQueue import GroovyTECQueue
 from discord.ext import commands,tasks
 import os,psutil
 from dotenv import load_dotenv
 from server import keep_alive
+from datetime import datetime
 
 #Constantes
 botName= "GroovyTEC"
+botId = 880231421040541787
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
 # Se prepara el ambiente
@@ -18,13 +20,23 @@ intents = discord.Intents().all()
 bot = commands.Bot(command_prefix='-',intents=intents)
 groovyTECQueue = GroovyTECQueue()
 groovyTECQueue.setBot(bot)
-
 load_dotenv()
 
 #Lista de Eventos
 @bot.event
 async def on_ready():
   print("GroovyTEC está ready!")
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+  global groovyTECQueue
+  if member.bot == True and member.id == botId and before.channel == None:  
+    print("Bot entrando a las: ", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+  if member.bot == True and member.id == botId and after.channel == None:  
+    print("Bot saliendo a las: ", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+    if(groovyTECQueue.currentTask != None):
+        groovyTECQueue.currentTask.cancel()
+        groovyTECQueue.clearVars()
 
 @bot.event
 async def on_member_join(member):
@@ -57,9 +69,6 @@ async def leave(ctx):
         raise discord.ext.commands.CommandError(botName+" ya se encuentra en uso en otro canal de voz.")
       else:
         await groovyTECQueue.sendMessage("A mimir Zzz :sleeping:")
-        if(groovyTECQueue.currentTask != None):
-          groovyTECQueue.currentTask.cancel()
-        groovyTECQueue.clearVars()
         await voice_client.disconnect()
         
         
@@ -67,13 +76,8 @@ async def leave(ctx):
 @bot.command(name='play', aliases=['p'], help='Para reproducir una canción')
 async def play(ctx,*url):
     try :      
-      
-      actualizarContexto(ctx)
-
-      #Inicializa el queue si es que el bot a estado desconectado
-      if(groovyTECQueue.currentSong == None ):
-        groovyTECQueue.currentTask = bot.loop.create_task(groovyTECQueue.playCurrentSong())
-      
+      global groovyTECQueue
+      actualizarContexto(ctx)     
       cancion = ""
       if type(url) == tuple and len(url)==0:
         if ctx.channel.guild.voice_client.is_playing():
@@ -103,6 +107,7 @@ async def play(ctx,*url):
 @bot.command(name='replay', aliases=['r'], help='Para reproducir la ultima canción')
 async def replay(ctx):
     try:
+      global groovyTECQueue
       actualizarContexto(ctx)
       await groovyTECQueue.replayLastSong()
     except:
@@ -115,21 +120,25 @@ async def queue(ctx):
     
 @bot.command(name="pause", help="Detiene la canción actual")
 async def pause(ctx):
+    global groovyTECQueue
     actualizarContexto(ctx)
     await groovyTECQueue.pauseSong()
 
 @bot.command(name="resume", aliases=['continue'], help="Reanuda la canción actual")
 async def resume(ctx):
+    global groovyTECQueue
     actualizarContexto(ctx)
     await groovyTECQueue.resumeSong()
 
 @bot.command(name="stop", aliases=['s'], help="Detiene la canción")
 async def stop(ctx):
+    global groovyTECQueue
     actualizarContexto(ctx)
     await groovyTECQueue.stopSong()
 
 @bot.command(name="skip", help="Para pasar a la siguiente canción")
 async def skip(ctx):
+    global groovyTECQueue
     actualizarContexto(ctx)
     await groovyTECQueue.skipSong()
 
@@ -143,6 +152,7 @@ async def resources(ctx):
 
 @bot.command(name="loop", help="Para poner en loop la cancion actual")
 async def loop(ctx):
+    global groovyTECQueue
     actualizarContexto(ctx)
     await groovyTECQueue.loopSong()
 
@@ -167,6 +177,8 @@ async def validarDisponibilidadDelBot(ctx):
   if ctx.author.voice is None:
     raise discord.ext.commands.CommandError("No estas conectado a un canal de voz.")
   elif ctx.voice_client is None:
+      global groovyTECQueue
+      groovyTECQueue.createTask()
       await ctx.author.voice.channel.connect()
   elif ctx.author.voice.channel != ctx.channel.guild.voice_client.channel:
     raise discord.ext.commands.CommandError(botName+" ya se encuentra en uso en otro canal de voz.")
@@ -176,6 +188,7 @@ async def validarDisponibilidadDelBot(ctx):
     raise discord.ext.commands.CommandError("Algo salió mal xd.")
 
 def actualizarContexto(ctx):
+  global groovyTECQueue
   groovyTECQueue.setContext(ctx)
 
 if __name__ == "__main__" :

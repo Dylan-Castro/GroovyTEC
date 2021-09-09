@@ -32,7 +32,7 @@ class GroovyTECQueue:
 
   def createTask(self):
     #Inicializa el queue si es que el bot a estado desconectado
-    if(self.currentSong == None ):
+    if self.currentTask == None:
       self.currentTask = asyncio.create_task(self.playCurrentSong())
 
   async def sendMessage(self, mensaje, thumbnail = "", titulo = ""):
@@ -95,10 +95,9 @@ class GroovyTECQueue:
       await self.sendMessage("**Se agregó **"+song.getTitle()+"** al queue**")
 
   async def showCurrent(self):
-    currentSong = self.getCurrentSong()
-    if currentSong:
+    if self.getCurrentSong() != None:
       # Construcción del tiempo total 
-      duration = currentSong.getDuration()
+      duration = self.getCurrentSong().getDuration()
       seconds = duration % (24 * 3600) 
       hour = seconds // 3600
       seconds %= 3600
@@ -123,7 +122,7 @@ class GroovyTECQueue:
       else:
           current_elapsed_time = "%02d:%02d" % (minutes, seconds)
       
-      await self.sendMessage(currentSong.getTitle()+"\n"+current_elapsed_time+"/"+songTime)
+      await self.sendMessage(self.getCurrentSong().getTitle()+"\n"+current_elapsed_time+"/"+songTime)
     else:
       await self.sendMessage("**No hay canciones sonando manito**")
 
@@ -135,7 +134,7 @@ class GroovyTECQueue:
   async def replayLastSong(self):
     try:
       if self.lastSong == None:
-        await self.sendMessage("No se ha tocado ninguna canción antes, por que no mejor me tocas esta papi :cucumber:.")
+        await self.sendMessage("No se ha tocado ninguna canción antes.")
       elif self.getCurrentSong() == None:
         await self.songsQueue.put(self.lastSong)
       else:

@@ -19,9 +19,10 @@ FFMPEG_OPTIONS = {'before_options': '-nostdin -reconnect 1 -reconnect_streamed 1
 
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
+ytdl.cache.remove()
 
 class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.5):
+    def __init__(self, source, *, data, volume=1):
         super().__init__(source, volume)
         self.data = data
         self.title = data.get('title')

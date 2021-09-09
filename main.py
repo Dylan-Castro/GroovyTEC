@@ -6,6 +6,7 @@ import os,psutil
 from dotenv import load_dotenv
 from server import keep_alive
 from datetime import datetime
+import pytz
 
 #Constantes
 botName= "GroovyTEC"
@@ -30,13 +31,15 @@ async def on_ready():
 @bot.event
 async def on_voice_state_update(member, before, after):
   global groovyTECQueue
-  if member.bot == True and member.id == botId and before.channel == None:  
-    print("Bot entrando a las: ", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-  if member.bot == True and member.id == botId and after.channel == None:  
-    print("Bot saliendo a las: ", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-    if(groovyTECQueue.currentTask != None):
-        groovyTECQueue.currentTask.cancel()
-        groovyTECQueue.clearVars()
+  if member.bot == True and member.id == botId and before.channel == None:
+    guardarEnLog("Bot entrando a las: "+ datetime.now(pytz.timezone("America/Lima")).strftime("%d/%m/%Y %H:%M:%S"))  
+    groovyTECQueue.createTask()
+    
+  if member.bot == True and member.id == botId and after.channel == None: 
+    guardarEnLog("Bot saliendo a las: "+ datetime.now(pytz.timezone("America/Lima")).strftime("%d/%m/%Y %H:%M:%S"))
+    if groovyTECQueue.currentTask != None: 
+      groovyTECQueue.currentTask.cancel()
+      groovyTECQueue.clearVars()
 
 @bot.event
 async def on_member_join(member):
@@ -177,8 +180,6 @@ async def validarDisponibilidadDelBot(ctx):
   if ctx.author.voice is None:
     raise discord.ext.commands.CommandError("No estas conectado a un canal de voz.")
   elif ctx.voice_client is None:
-      global groovyTECQueue
-      groovyTECQueue.createTask()
       await ctx.author.voice.channel.connect()
   elif ctx.author.voice.channel != ctx.channel.guild.voice_client.channel:
     raise discord.ext.commands.CommandError(botName+" ya se encuentra en uso en otro canal de voz.")
@@ -190,6 +191,11 @@ async def validarDisponibilidadDelBot(ctx):
 def actualizarContexto(ctx):
   global groovyTECQueue
   groovyTECQueue.setContext(ctx)
+
+def guardarEnLog(mensaje):
+  file = open('log.txt', 'a')
+  file.write(mensaje + "\n")
+  file.close()
 
 if __name__ == "__main__" :
     keep_alive()

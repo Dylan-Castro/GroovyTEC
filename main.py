@@ -1,11 +1,12 @@
-import youtubeUtil, discord
+import youtubeUtil, discord, asyncio 
 from musicObject import MusicObject
 from groovyTECQueue import GroovyTECQueue
 from discord.ext import commands,tasks
-import os,psutil
+import os, psutil
 from dotenv import load_dotenv
 from server import keep_alive
 from datetime import datetime
+from PersonalPlayList.personalPlayList import PersonalPlayList
 import pytz
 
 #Constantes
@@ -14,13 +15,12 @@ botId = 880231421040541787
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
 # Se prepara el ambiente
-DISCORD_TOKEN = os.environ['discord_token']
+DISCORD_TOKEN = os.environ['discord_token2']
 
 intents = discord.Intents().all()
 #client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='-',intents=intents)
-groovyTECQueue = GroovyTECQueue()
-groovyTECQueue.setBot(bot)
+groovyTECQueue = None
 load_dotenv()
 
 #Lista de Eventos
@@ -33,13 +33,17 @@ async def on_voice_state_update(member, before, after):
   global groovyTECQueue
   if member.bot == True and member.id == botId and before.channel == None:
     guardarEnLog("Bot entrando a las: "+ datetime.now(pytz.timezone("America/Lima")).strftime("%d/%m/%Y %H:%M:%S"))  
+    groovyTECQueue = GroovyTECQueue()
+    groovyTECQueue.setBot(bot)
     groovyTECQueue.createTask()
     
   if member.bot == True and member.id == botId and after.channel == None: 
     guardarEnLog("Bot saliendo a las: "+ datetime.now(pytz.timezone("America/Lima")).strftime("%d/%m/%Y %H:%M:%S"))
-    if groovyTECQueue.currentTask != None: 
-      groovyTECQueue.currentTask.cancel()
-      groovyTECQueue.clearVars()
+    if groovyTECQueue != None:
+      if groovyTECQueue.currentTask != None: 
+        groovyTECQueue.currentTask.cancel()
+        groovyTECQueue.clearVars()
+      groovyTECQueue = None
 
 @bot.event
 async def on_member_join(member):
@@ -78,7 +82,7 @@ async def leave(ctx):
 
 @bot.command(name='play', aliases=['p'], help='Para reproducir una canción')
 async def play(ctx,*url):
-    try :      
+    try :            
       global groovyTECQueue
       actualizarContexto(ctx)     
       cancion = ""
@@ -164,6 +168,77 @@ async def current(ctx):
     actualizarContexto(ctx)
     await groovyTECQueue.showCurrent()
 
+@bot.group(aliases=['pl'], help="Para reproducir su playlist. Cuenta con el comando add *arg.")
+async def playlist(ctx):
+  try:
+    global groovyTECQueue
+    if groovyTECQueue.personalPlayList == None:
+      groovyTECQueue.personalPlayList = PersonalPlayList()
+    groovyTECQueue.personalPlayList.addMember(ctx.author)
+    if ctx.invoked_subcommand is None:
+      actualizarContexto(ctx)
+      playListDisponible = await groovyTECQueue.getPersonalPlayList(ctx.author.name)
+      if playListDisponible:
+        groovyTECQueue.addPersonalPlayListToQueue()
+        await groovyTECQueue.sendMessage("Su playlist Sir "+ ctx.author.name)
+  except:
+      await groovyTECQueue.sendMessage("Hubo un problema al cargar la playlist.")
+
+@playlist.command(name="add", aliases=['a'])
+async def add(ctx,*url):
+  try :    
+    global groovyTECQueue
+    actualizarContexto(ctx)     
+    cancion = ""
+    if type(url) == tuple and len(url)!=0:
+      for palabra in url:
+        cancion += palabra
+        cancion += " "
+    else:
+      cancion = url
+
+    #Se busca el video declarado
+    async with ctx.typing():
+      data = await youtubeUtil.YTDLSource.from_url(cancion, loop=bot.loop, stream=True)
+    
+    #Se crea el objecto musica
+    musicObject = MusicObject(data['filename'],data['webpage_url'],data['title'],data['duration'],data['thumbnail'])
+
+    #Se agrega al playlist personal
+    bot.loop.call_soon_threadsafe(groovyTECQueue.addSongToPersonalPlayList,musicObject, ctx.author.id)
+    await groovyTECQueue.sendMessage("Cancion agregada a su playlist personal mi estimado.")
+  except:
+      await groovyTECQueue.sendMessage("No se pudo agregar la canción a la playlist mi king.")
+  
+@playlist.command(aliases=['u'])
+async def user(ctx, user):
+  try:
+    global groovyTECQueue
+    if groovyTECQueue.personalPlayList == None:
+      groovyTECQueue.personalPlayList = PersonalPlayList()
+    if ctx.invoked_subcommand is None:
+      actualizarContexto(ctx)
+      user = int(user[3:len(user)-1])
+      playListDisponible = await groovyTECQueue.getPersonalPlayList(user)
+      if playListDisponible:
+        groovyTECQueue.addPersonalPlayListToQueue()
+        await groovyTECQueue.sendMessage("Playlist de "+groovyTECQueue.personalPlayList.getMember(user)+":")
+  except:
+      await groovyTECQueue.sendMessage("Hubo un problema al cargar la playlist")
+
+@playlist.command(aliases=['l'])
+async def list(ctx, user = None):
+  try:
+    global groovyTECQueue
+    actualizarContexto(ctx)
+    if user == None:
+      await groovyTECQueue.listPlayListUsers()
+    else:
+      user = int(user[3:len(user)-1])
+      await groovyTECQueue.listPlayList(user)
+  except:
+      await groovyTECQueue.sendMessage("Hubo un problema al cargar la playlist")
+  
 #Funciones Utiles
 @loop.before_invoke
 @pause.before_invoke
@@ -176,7 +251,9 @@ async def current(ctx):
 @stop.before_invoke
 @test.before_invoke
 @current.before_invoke
+@playlist.before_invoke
 async def validarDisponibilidadDelBot(ctx):
+  await bot.wait_until_ready()
   if ctx.author.voice is None:
     raise discord.ext.commands.CommandError("No estas conectado a un canal de voz.")
   elif ctx.voice_client is None:

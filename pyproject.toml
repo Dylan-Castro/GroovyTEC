@@ -1,16 +1,21 @@
-[tool]
 [tool.poetry]
-authors = ["Bucketcitos.h <dylan.castro@utec.edu.pe>"]
-description = "Bot de musica en memoria de Groovy"
-name = "GroovyTec"
-version = "1.0.0"
+name = "repl_python3_GroovyTEC"
+version = "0.1.0"
+description = ""
+authors = ["NicolasAlejandr <<>>"]
+
 [tool.poetry.dependencies]
-Flask = "2.0.1"
-PyNaCl = "1.4.0"
-async-timeout = "3.0.1"
-discord = "1.7.3"
-psutil = "5.8.0"
 python = "^3.8"
-python-dotenv = "0.19.0"
-pytz = "2021.1"
-youtube_dl = "2021.12.17"
+discord = "^1.7.3"
+youtube_dl = "^2021.6.6"
+python-dotenv = "^0.19.0"
+PyNaCl = "^1.4.0"
+Flask = "^2.0.1"
+psutil = "^5.8.0"
+pytz = "^2021.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
